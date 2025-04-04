@@ -3,6 +3,7 @@ import time
 
 from program.aopadder import AOP
 from program.model.parfum import *
+from program.testableHtmlParser import scrape_page
 
 
 @AOP.log_method_call
@@ -33,7 +34,6 @@ def store_perfume_details(perfume_details: PerfumeDetails, enjoyment: Enjoyment,
 
     connection.commit()
     connection.close()
-
 
 @AOP.log_method_call
 @AOP.log_execution_time
@@ -161,13 +161,13 @@ def scrape_and_store_multiple(urls, enjoyment, database_path):
     """
     for url in urls:
         try:
-            # perfume_details = scrape_page(url)
-            perfume_details = debug_perfume_details()  # make so debug mode enabled true makes this turn on instead of comment in or out.
+            perfume_details = scrape_page(url)
+            # perfume_details = debug_perfume_details()  # make so debug mode enabled true makes this turn on instead of comment in or out.
             store_perfume_details(perfume_details, enjoyment, database_path)
             print(f"Successfully processed {url}")
         except Exception as e:
             print(f"Error processing {url}: {e}")
-        time.sleep(2.3)
+        time.sleep(5.3)
 
 
 def debug_perfume_details():
