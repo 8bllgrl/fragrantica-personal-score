@@ -3,132 +3,172 @@ import time
 from enum import Enum
 
 from program.aopadder import AOP
-from program.main import DATABASE_PATH
 from program.model.parfum import *
 from program.testableHtmlParser import scrape_page
 
 
-@AOP.log_method_call  # Logging input and output
-@AOP.log_execution_time  # Log execution time
-def store_perfume_details(perfume_details: PerfumeDetails, enjoyment: Enjoyment):
-    connection = sqlite3.connect(DATABASE_PATH)
+@AOP.log_method_call
+@AOP.log_execution_time
+def store_perfume_details(perfume_details: PerfumeDetails, enjoyment: Enjoyment, database_path: str):
+    connection = sqlite3.connect(database_path)
     cursor = connection.cursor()
 
-    # Map enjoyment levels to score values
-    enjoyment_score_map = {
-        Enjoyment.LOVE: 3,
-        Enjoyment.LIKE: 2,
-        Enjoyment.OK: 1,
-        Enjoyment.DISLIKE: -1,
-        Enjoyment.HATE: -2
-    }
+    perfume_enjoyment_score = enjoyment.value
 
-    # Calculate the score based on enjoyment
-    perfume_enjoyment_score = enjoyment_score_map.get(enjoyment, 0)
-
-    # Insert or update perfume details with enjoyment score
-    cursor.execute('''
-        SELECT id FROM Perfumes WHERE perfume_name = ? AND url = ?
-    ''', (perfume_details.perfume_name, perfume_details.url))
-    perfume_id = cursor.fetchone()
-
+    perfume_id = get_perfume_id(cursor, perfume_details.perfume_name, perfume_details.url)
     if perfume_id is None:
-        # If the perfume doesn't exist, insert it
-        cursor.execute('''
-            INSERT INTO Perfumes (perfume_name, url, enjoyment_score) 
-            VALUES (?, ?, ?)
-        ''', (perfume_details.perfume_name, perfume_details.url, perfume_enjoyment_score))
-        perfume_id = cursor.lastrowid
+        perfume_id = insert_perfume(cursor, perfume_details.perfume_name, perfume_details.url, perfume_enjoyment_score)
     else:
-        perfume_id = perfume_id[0]
-        # If the perfume exists, update the enjoyment score
-        cursor.execute('''
-            UPDATE Perfumes SET enjoyment_score = ? WHERE id = ?
-        ''', (perfume_enjoyment_score, perfume_id))
+        update_perfume_enjoyment(cursor, perfume_enjoyment_score, perfume_id)
 
-    # Insert or update notes
     for note in perfume_details.notes:
-        cursor.execute('''
-            SELECT id FROM Notes WHERE name = ?
-        ''', (note.name,))
-        note_id = cursor.fetchone()
+        note_id = get_or_insert_note(cursor, note)
+        update_perfume_note_score(cursor, perfume_id, note_id, perfume_enjoyment_score)
 
-        if note_id is None:
-            # If the note doesn't exist, insert it
-            cursor.execute('''
-                INSERT INTO Notes (name, category) 
-                VALUES (?, ?)
-            ''', (note.name, note.category.name))
-            note_id = cursor.lastrowid
-        else:
-            note_id = note_id[0]
-
-        # Check if the note is already associated with this perfume and update score
-        cursor.execute('''
-            SELECT score FROM PerfumeNotes WHERE perfume_id = ? AND note_id = ?
-        ''', (perfume_id, note_id))
-        existing_score = cursor.fetchone()
-
-        if existing_score is None:
-            # If no score exists, insert the score
-            cursor.execute('''
-                INSERT INTO PerfumeNotes (perfume_id, note_id, score) 
-                VALUES (?, ?, ?)
-            ''', (perfume_id, note_id, perfume_enjoyment_score))
-        else:
-            # If a score exists, update the score
-            cursor.execute('''
-                UPDATE PerfumeNotes SET score = ? WHERE perfume_id = ? AND note_id = ?
-            ''', (perfume_enjoyment_score, perfume_id, note_id))
-
-    # Insert or update accords
     for accord in perfume_details.accords:
-        cursor.execute('''
-            SELECT id FROM Accords WHERE name = ?
-        ''', (accord.name,))
-        accord_id = cursor.fetchone()
-
-        if accord_id is None:
-            # If the accord doesn't exist, insert it
-            cursor.execute('''
-                INSERT INTO Accords (name, background) 
-                VALUES (?, ?)
-            ''', (accord.name, accord.background))
-            accord_id = cursor.lastrowid
-        else:
-            accord_id = accord_id[0]
-
-        # Check if the accord is already associated with this perfume and update score
-        cursor.execute('''
-            SELECT score FROM PerfumeAccords WHERE perfume_id = ? AND accord_id = ?
-        ''', (perfume_id, accord_id))
-        existing_score = cursor.fetchone()
-
-        if existing_score is None:
-            # If no score exists, insert the score
-            cursor.execute('''
-                INSERT INTO PerfumeAccords (perfume_id, accord_id, score) 
-                VALUES (?, ?, ?)
-            ''', (perfume_id, accord_id, perfume_enjoyment_score))
-        else:
-            # If a score exists, update the score
-            cursor.execute('''
-                UPDATE PerfumeAccords SET score = ? WHERE perfume_id = ? AND accord_id = ?
-            ''', (perfume_enjoyment_score, perfume_id, accord_id))
+        accord_id = get_or_insert_accord(cursor, accord)
+        update_perfume_accord_score(cursor, perfume_id, accord_id, perfume_enjoyment_score)
 
     connection.commit()
     connection.close()
 
-def scrape_and_store_multiple(urls, enjoyment):
+
+@AOP.log_method_call
+@AOP.log_execution_time
+def get_perfume_id(cursor, perfume_name, url):
+    cursor.execute('''
+        SELECT id FROM Perfumes WHERE perfume_name = ? AND url = ?
+    ''', (perfume_name, url))
+    return cursor.fetchone()
+
+
+@AOP.log_method_call
+@AOP.log_execution_time
+def insert_perfume(cursor, perfume_name, url, enjoyment_score):
+    cursor.execute('''
+        INSERT INTO Perfumes (perfume_name, url, enjoyment_score) 
+        VALUES (?, ?, ?)
+    ''', (perfume_name, url, enjoyment_score))
+    return cursor.lastrowid
+
+
+@AOP.log_method_call
+@AOP.log_execution_time
+def update_perfume_enjoyment(cursor, enjoyment_score, perfume_id):
+    cursor.execute('''
+        UPDATE Perfumes SET enjoyment_score = ? WHERE id = ?
+    ''', (enjoyment_score, perfume_id))
+
+
+@AOP.log_method_call
+@AOP.log_execution_time
+def get_or_insert_note(cursor, note):
+    cursor.execute('''
+        SELECT id FROM Notes WHERE name = ?
+    ''', (note.name,))
+    note_id = cursor.fetchone()
+    if note_id is None:
+        note_id = insert_note(cursor, note)
+    else:
+        note_id = note_id[0]
+    return note_id
+
+
+@AOP.log_method_call
+@AOP.log_execution_time
+def insert_note(cursor, note):
+    cursor.execute('''
+        INSERT INTO Notes (name) 
+        VALUES (?)
+    ''', (note.name,))
+    return cursor.lastrowid
+
+
+@AOP.log_method_call
+@AOP.log_execution_time
+def update_perfume_note_score(cursor, perfume_id, note_id, enjoyment_score):
+    cursor.execute('''
+        SELECT score FROM PerfumeNotes WHERE perfume_id = ? AND note_id = ?
+    ''', (perfume_id, note_id))
+    existing_score = cursor.fetchone()
+    if existing_score is None:
+        cursor.execute('''
+            INSERT INTO PerfumeNotes (perfume_id, note_id, score) 
+            VALUES (?, ?, ?)
+        ''', (perfume_id, note_id, enjoyment_score))
+    else:
+        cursor.execute('''
+            UPDATE PerfumeNotes SET score = ? WHERE perfume_id = ? AND note_id = ?
+        ''', (enjoyment_score, perfume_id, note_id))
+
+
+@AOP.log_method_call
+@AOP.log_execution_time
+def get_or_insert_accord(cursor, accord):
+    cursor.execute('''
+        SELECT id FROM Accords WHERE name = ?
+    ''', (accord.name,))
+    accord_id = cursor.fetchone()
+    if accord_id is None:
+        accord_id = insert_accord(cursor, accord)
+    else:
+        accord_id = accord_id[0]
+    return accord_id
+
+
+@AOP.log_method_call
+@AOP.log_execution_time
+def insert_accord(cursor, accord):
+    cursor.execute('''
+        INSERT INTO Accords (name, background) 
+        VALUES (?, ?)
+    ''', (accord.name, accord.background))
+    return cursor.lastrowid
+
+
+@AOP.log_method_call
+@AOP.log_execution_time
+def update_perfume_accord_score(cursor, perfume_id, accord_id, enjoyment_score):
+    cursor.execute('''
+        SELECT score FROM PerfumeAccords WHERE perfume_id = ? AND accord_id = ?
+    ''', (perfume_id, accord_id))
+    existing_score = cursor.fetchone()
+    if existing_score is None:
+        cursor.execute('''
+            INSERT INTO PerfumeAccords (perfume_id, accord_id, score) 
+            VALUES (?, ?, ?)
+        ''', (perfume_id, accord_id, enjoyment_score))
+    else:
+        cursor.execute('''
+            UPDATE PerfumeAccords SET score = ? WHERE perfume_id = ? AND accord_id = ?
+        ''', (enjoyment_score, perfume_id, accord_id))
+
+
+@AOP.log_method_call
+@AOP.log_execution_time
+def scrape_and_store_multiple(urls, enjoyment, database_path):
     """
     Scrapes perfume details from multiple URLs, stores them with enjoyment,
     and waits 10 seconds between each URL.
     """
     for url in urls:
         try:
-            perfume_details = scrape_page(url)  # Assuming scrape_page is defined
-            store_perfume_details(perfume_details, enjoyment) # Assuming store_perfume_details is defined
+            perfume_details = scrape_page(url)
+            # perfume_details = debug_perfume_details() # make so debug mode enabled true makes this turn on instead of comment in or out.
+            store_perfume_details(perfume_details, enjoyment, database_path)
             print(f"Successfully processed {url}")
         except Exception as e:
             print(f"Error processing {url}: {e}")
         time.sleep(2.3)
+
+
+def debug_perfume_details():
+    debug_perfume = PerfumeDetails(perfume_name='TESTDATA',
+                          accords=[Accord(name='floral', background='rgb(255, 95, 141)', width='100%', opacity='1'),
+                                   Accord(name='animalic', background='rgb(142, 75, 19)', width='59.0798%',
+                                          opacity='0.649255')],
+                          notes=[Note(name='Frangipani', category=NoteCategory.MIDDLE, width='5.0', opacity='1.0',
+                                      image_url='https://fimgs.net/mdimg/sastojci/t.151.jpg'),
+                                 Note(name='Iris', category=NoteCategory.MIDDLE, width='2.5', opacity='0.735089',
+                                      image_url='https://fimgs.net/mdimg/sastojci/t.11.jpg')], url='no-url')
+    return debug_perfume

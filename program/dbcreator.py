@@ -1,11 +1,8 @@
 import sqlite3
 import os
 
-from program.main import DATABASE_PATH
-
-
 def create_db():
-    db_path = DATABASE_PATH
+    db_path = r'D:/sqlite_exp/frag/fragrance_4420251217.db'
 
     if os.path.exists(db_path):
         os.remove(db_path)
@@ -25,8 +22,7 @@ def create_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS Notes (
             id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
-            category TEXT NOT NULL
+            name TEXT NOT NULL
         )
     ''')
 

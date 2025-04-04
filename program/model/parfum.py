@@ -1,9 +1,10 @@
 from enum import Enum
+from typing import List
 
 class Enjoyment(Enum):
     LOVE = 3
-    LIKE =2
-    OK =1
+    LIKE = 2
+    OK = 1
     DISLIKE = -1
     HATE = -2
 
@@ -14,42 +15,41 @@ class NoteCategory(Enum):
     BASE = "Base Notes"
     UNKNOWN = "Unknown."
 
-
 class Note:
     """Represents a fragrance note with properties."""
 
-    def __init__(self, name, image_url, width, opacity, category):
-        self.name = name
-        self.image_url = image_url
-        self.width = width
-        self.opacity = opacity
-        self.category = category
+    def __init__(self, name: str, image_url: str, width: str, opacity: str, category: NoteCategory):
+        self.name: str = name
+        self.image_url: str = image_url
+        self.width: str = width
+        self.opacity: str = opacity
+        self.category: NoteCategory = category
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Note(name='{self.name}', category='{self.category.name}', width='{self.width}', opacity='{self.opacity}', image_url='{self.image_url}')"
 
 
 class Accord:
     """Represents an accord with its properties."""
 
-    def __init__(self, name, background, width, opacity):
-        self.name = name
-        self.background = background
-        self.width = width
-        self.opacity = opacity
+    def __init__(self, name: str, background: str, width: str, opacity: str):
+        self.name: str = name
+        self.background: str = background
+        self.width: str = width
+        self.opacity: str = opacity
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Accord(name='{self.name}', background='{self.background}', width='{self.width}', opacity='{self.opacity}')"
 
 
 class PerfumeDetails:
     """Class that holds the details of a perfume including its name, accords, and notes."""
 
-    def __init__(self, perfume_name, accords, notes, url):
-        self.perfume_name = perfume_name
-        self.accords = accords
-        self.notes = notes
-        self.url = url
+    def __init__(self, perfume_name: str, accords: List[Accord], notes: List[Note], url: str):
+        self.perfume_name: str = perfume_name
+        self.accords: List[Accord] = accords
+        self.notes: List[Note] = notes
+        self.url: str = url
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"PerfumeDetails(perfume_name='{self.perfume_name}', accords={self.accords}, notes={self.notes})"
