@@ -3,6 +3,7 @@ import time
 from enum import Enum
 
 from program.aopadder import AOP
+from program.main import DATABASE_PATH
 from program.model.parfum import *
 from program.testableHtmlParser import scrape_page
 
@@ -10,7 +11,7 @@ from program.testableHtmlParser import scrape_page
 @AOP.log_method_call  # Logging input and output
 @AOP.log_execution_time  # Log execution time
 def store_perfume_details(perfume_details: PerfumeDetails, enjoyment: Enjoyment):
-    connection = sqlite3.connect(r'D:/sqlite_exp/frag/fragrance_432025115.db')
+    connection = sqlite3.connect(DATABASE_PATH)
     cursor = connection.cursor()
 
     # Map enjoyment levels to score values

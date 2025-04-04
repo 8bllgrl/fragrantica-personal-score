@@ -1,19 +1,18 @@
 import sqlite3
 import os
 
+from program.main import DATABASE_PATH
+
 
 def create_db():
-    db_path = r'D:/sqlite_exp/frag/fragrance_432025115.db'
+    db_path = DATABASE_PATH
 
-    # If the database already exists, delete it
     if os.path.exists(db_path):
         os.remove(db_path)
 
-    # Create a new database and tables
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
 
-    # Create tables
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS Perfumes (
             id INTEGER PRIMARY KEY,
