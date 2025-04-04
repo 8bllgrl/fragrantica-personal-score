@@ -10,9 +10,8 @@ import re
 from program.aopadder import AOP
 from program.model.parfum import *
 
-
-@AOP.log_method_call  # Logging input and output
-@AOP.log_execution_time  # Log execution time
+@AOP.log_method_call
+@AOP.log_execution_time
 def setup_driver():
     """Sets up and returns a headless Selenium WebDriver."""
     options = Options()
@@ -25,9 +24,8 @@ def setup_driver():
     driver = webdriver.Chrome(service=service, options=options)
     return driver
 
-
-@AOP.log_method_call  # Logging input and output
-@AOP.log_execution_time  # Log execution time
+@AOP.log_method_call
+@AOP.log_execution_time
 def find_main_title(soup):
     """Finds and returns the main perfume title from the page."""
     title_element = soup.find("h1", {"itemprop": "name"})
@@ -35,24 +33,22 @@ def find_main_title(soup):
         return title_element.get_text(strip=True)
     return None
 
-
-@AOP.log_method_call  # Logging input and output
-@AOP.log_execution_time  # Log execution time
+@AOP.log_method_call
+@AOP.log_execution_time
 def extract_style_value(style_string, property_name):
     """Extracts a specific CSS property value from a style string."""
     match = re.search(f"{property_name}: ([^;]+);", style_string)
     return match.group(1) if match else None
 
-
-@AOP.log_method_call  # Logging input and output
-@AOP.log_execution_time  # Log execution time
+@AOP.log_method_call
+@AOP.log_execution_time
 def extract_style_value_notes(style_string, property_name):
     """Extracts a specific CSS property value from a style string."""
     match = re.search(f"{property_name}: ([^;]+);", style_string)
     return float(match.group(1).replace("rem", "")) if match else None
 
-@AOP.log_method_call  # Logging input and output
-@AOP.log_execution_time  # Log execution time
+@AOP.log_method_call
+@AOP.log_execution_time
 def handle_missing_notes(soup):
     """Fallback method to handle missing notes."""
     notes = []
@@ -80,9 +76,8 @@ def handle_missing_notes(soup):
 
     return notes
 
-
-@AOP.log_method_call  # Logging input and output
-@AOP.log_execution_time  # Log execution time
+@AOP.log_method_call
+@AOP.log_execution_time
 def find_perfume_notes(soup):
     """Finds and organizes fragrance notes."""
     categories = {
@@ -101,7 +96,6 @@ def find_perfume_notes(soup):
                 img_tag = note_div.find("img")
                 name_tag = note_div.find("a")
 
-                # Extract the name directly from the div after the <a> tag
                 if img_tag and name_tag:
                     name = note_div.get_text(strip=True).replace(name_tag.get_text(strip=True), "").strip()
                     name = name.replace("-", " ")
@@ -112,18 +106,14 @@ def find_perfume_notes(soup):
 
                     notes.append(Note(name, image_url, width, opacity, category_enum))
 
-    # If no notes were found, call the fallback method
     if not notes:
         notes = handle_missing_notes(soup)
 
-    # Sort notes by width from largest to smallest
     notes.sort(key=lambda note: note.width, reverse=True)
     return notes
 
-
-
-@AOP.log_method_call  # Logging input and output
-@AOP.log_execution_time  # Log execution time
+@AOP.log_method_call
+@AOP.log_execution_time
 def find_accords_section(soup):
     """Finds all accord elements and stores them as objects."""
     accord_elements = soup.select("div.cell.accord-box div.accord-bar")
@@ -140,26 +130,22 @@ def find_accords_section(soup):
 
     return accords
 
-
-@AOP.log_method_call  # Logging input and output
-@AOP.log_execution_time  # Log execution time
+@AOP.log_method_call
+@AOP.log_execution_time
 def scrape_page(url, driver=None):
     """Main function to fetch page source and extract required details."""
     if driver is None:
         driver = setup_driver()
 
     driver.get(url)
-    time.sleep(5)  # Wait for full page load
+    time.sleep(5)
 
     soup = BeautifulSoup(driver.page_source, "html.parser")
 
-    # Call the individual scraping methods
     title = find_main_title(soup)
     accords = find_accords_section(soup)
     notes = find_perfume_notes(soup)
 
     driver.quit()
 
-    # Return an instance of PerfumeDetails with the scraped data
     return PerfumeDetails(perfume_name=title, accords=accords, notes=notes, url=url)
-

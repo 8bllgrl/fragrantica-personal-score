@@ -38,7 +38,7 @@ def create_db():
         CREATE TABLE IF NOT EXISTS PerfumeNotes (
             perfume_id INTEGER NOT NULL,
             note_id INTEGER NOT NULL,
-            score INTEGER NOT NULL,
+            score REAL NOT NULL,
             FOREIGN KEY (perfume_id) REFERENCES Perfumes(id),
             FOREIGN KEY (note_id) REFERENCES Notes(id)
         )
@@ -48,7 +48,7 @@ def create_db():
         CREATE TABLE IF NOT EXISTS PerfumeAccords (
             perfume_id INTEGER NOT NULL,
             accord_id INTEGER NOT NULL,
-            score INTEGER NOT NULL,
+            score REAL NOT NULL,
             FOREIGN KEY (perfume_id) REFERENCES Perfumes(id),
             FOREIGN KEY (accord_id) REFERENCES Accords(id)
         )

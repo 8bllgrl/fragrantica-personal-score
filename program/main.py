@@ -10,5 +10,5 @@ DATABASE_PATH = r"D:\sqlite_exp\frag\fragrance_4420251217.db"
 urls = [
     'https://www.fragrantica.com/perfume/Maison-Martin-Margiela/Dancing-On-The-Moon-41186.html',
 ]
-enjoyment = Enjoyment.LIKE
+enjoyment = Enjoyment.HATE
 scrape_and_store_multiple(urls, enjoyment, DATABASE_PATH)

@@ -35,11 +35,17 @@ class Accord:
     def __init__(self, name: str, background: str, width: str, opacity: str):
         self.name: str = name
         self.background: str = background
-        self.width: str = width
         self.opacity: str = opacity
 
+        # Normalize the width
+        if '%' in width:
+            self.width: float = float(width.strip('%')) / 100
+        else:
+            self.width: float = float(width)
+
     def __repr__(self) -> str:
-        return f"Accord(name='{self.name}', background='{self.background}', width='{self.width}', opacity='{self.opacity}')"
+        return f"Accord(name='{self.name}', background='{self.background}', width={self.width}, opacity='{self.opacity}')"
+
 
 
 class PerfumeDetails:

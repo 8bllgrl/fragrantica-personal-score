@@ -1,10 +1,8 @@
 import sqlite3
 import time
-from enum import Enum
 
 from program.aopadder import AOP
 from program.model.parfum import *
-from program.testableHtmlParser import scrape_page
 
 
 @AOP.log_method_call
@@ -13,7 +11,7 @@ def store_perfume_details(perfume_details: PerfumeDetails, enjoyment: Enjoyment,
     connection = sqlite3.connect(database_path)
     cursor = connection.cursor()
 
-    perfume_enjoyment_score = enjoyment.value
+    perfume_enjoyment_score = enjoyment.value  # Directly use the value of the Enjoyment enum
 
     perfume_id = get_perfume_id(cursor, perfume_details.perfume_name, perfume_details.url)
     if perfume_id is None:
@@ -21,13 +19,17 @@ def store_perfume_details(perfume_details: PerfumeDetails, enjoyment: Enjoyment,
     else:
         update_perfume_enjoyment(cursor, perfume_enjoyment_score, perfume_id)
 
+    # Update the width of each note based on enjoyment value
     for note in perfume_details.notes:
+        modified_enjoyment = round(float(note.width) * enjoyment.value, 3)  # Round to 3 decimal places
         note_id = get_or_insert_note(cursor, note)
-        update_perfume_note_score(cursor, perfume_id, note_id, perfume_enjoyment_score)
+        update_perfume_note_score(cursor, perfume_id, note_id, modified_enjoyment)
 
+    # Update the width of each accord based on enjoyment value
     for accord in perfume_details.accords:
+        modified_enjoyment = round(float(accord.width) * enjoyment.value, 3)  # Round to 3 decimal places
         accord_id = get_or_insert_accord(cursor, accord)
-        update_perfume_accord_score(cursor, perfume_id, accord_id, perfume_enjoyment_score)
+        update_perfume_accord_score(cursor, perfume_id, accord_id, modified_enjoyment)
 
     connection.commit()
     connection.close()
@@ -36,10 +38,13 @@ def store_perfume_details(perfume_details: PerfumeDetails, enjoyment: Enjoyment,
 @AOP.log_method_call
 @AOP.log_execution_time
 def get_perfume_id(cursor, perfume_name, url):
-    cursor.execute('''
-        SELECT id FROM Perfumes WHERE perfume_name = ? AND url = ?
+    cursor.execute(''' 
+        SELECT id FROM Perfumes WHERE perfume_name = ? AND url = ? 
     ''', (perfume_name, url))
-    return cursor.fetchone()
+    result = cursor.fetchone()  # Fetch the result as a tuple
+    if result is not None:
+        return result[0]  # Return the first item of the tuple, which is the ID
+    return None
 
 
 @AOP.log_method_call
@@ -84,21 +89,22 @@ def insert_note(cursor, note):
     return cursor.lastrowid
 
 
+
 @AOP.log_method_call
 @AOP.log_execution_time
 def update_perfume_note_score(cursor, perfume_id, note_id, enjoyment_score):
-    cursor.execute('''
-        SELECT score FROM PerfumeNotes WHERE perfume_id = ? AND note_id = ?
+    cursor.execute(''' 
+        SELECT score FROM PerfumeNotes WHERE perfume_id = ? AND note_id = ? 
     ''', (perfume_id, note_id))
     existing_score = cursor.fetchone()
     if existing_score is None:
-        cursor.execute('''
+        cursor.execute(''' 
             INSERT INTO PerfumeNotes (perfume_id, note_id, score) 
-            VALUES (?, ?, ?)
+            VALUES (?, ?, ?) 
         ''', (perfume_id, note_id, enjoyment_score))
     else:
-        cursor.execute('''
-            UPDATE PerfumeNotes SET score = ? WHERE perfume_id = ? AND note_id = ?
+        cursor.execute(''' 
+            UPDATE PerfumeNotes SET score = ? WHERE perfume_id = ? AND note_id = ? 
         ''', (enjoyment_score, perfume_id, note_id))
 
 
@@ -126,21 +132,23 @@ def insert_accord(cursor, accord):
     return cursor.lastrowid
 
 
+
+
 @AOP.log_method_call
 @AOP.log_execution_time
 def update_perfume_accord_score(cursor, perfume_id, accord_id, enjoyment_score):
-    cursor.execute('''
-        SELECT score FROM PerfumeAccords WHERE perfume_id = ? AND accord_id = ?
+    cursor.execute(''' 
+        SELECT score FROM PerfumeAccords WHERE perfume_id = ? AND accord_id = ? 
     ''', (perfume_id, accord_id))
     existing_score = cursor.fetchone()
     if existing_score is None:
-        cursor.execute('''
+        cursor.execute(''' 
             INSERT INTO PerfumeAccords (perfume_id, accord_id, score) 
-            VALUES (?, ?, ?)
+            VALUES (?, ?, ?) 
         ''', (perfume_id, accord_id, enjoyment_score))
     else:
-        cursor.execute('''
-            UPDATE PerfumeAccords SET score = ? WHERE perfume_id = ? AND accord_id = ?
+        cursor.execute(''' 
+            UPDATE PerfumeAccords SET score = ? WHERE perfume_id = ? AND accord_id = ? 
         ''', (enjoyment_score, perfume_id, accord_id))
 
 
@@ -153,8 +161,8 @@ def scrape_and_store_multiple(urls, enjoyment, database_path):
     """
     for url in urls:
         try:
-            perfume_details = scrape_page(url)
-            # perfume_details = debug_perfume_details() # make so debug mode enabled true makes this turn on instead of comment in or out.
+            # perfume_details = scrape_page(url)
+            perfume_details = debug_perfume_details()  # make so debug mode enabled true makes this turn on instead of comment in or out.
             store_perfume_details(perfume_details, enjoyment, database_path)
             print(f"Successfully processed {url}")
         except Exception as e:
@@ -163,12 +171,16 @@ def scrape_and_store_multiple(urls, enjoyment, database_path):
 
 
 def debug_perfume_details():
-    debug_perfume = PerfumeDetails(perfume_name='TESTDATA',
-                          accords=[Accord(name='floral', background='rgb(255, 95, 141)', width='100%', opacity='1'),
-                                   Accord(name='animalic', background='rgb(142, 75, 19)', width='59.0798%',
-                                          opacity='0.649255')],
-                          notes=[Note(name='Frangipani', category=NoteCategory.MIDDLE, width='5.0', opacity='1.0',
-                                      image_url='https://fimgs.net/mdimg/sastojci/t.151.jpg'),
-                                 Note(name='Iris', category=NoteCategory.MIDDLE, width='2.5', opacity='0.735089',
-                                      image_url='https://fimgs.net/mdimg/sastojci/t.11.jpg')], url='no-url')
+    debug_perfume = PerfumeDetails(perfume_name='TESTER DATATA',
+                                   accords=[
+                                       Accord(name='floral', background='rgb(255, 95, 141)', width='100%', opacity='1'),
+                                       Accord(name='animalic', background='rgb(142, 75, 19)', width='59.0798%',
+                                              opacity='0.649255')],
+                                   notes=[
+                                       Note(name='Frangipani', category=NoteCategory.MIDDLE, width='5.0', opacity='1.0',
+                                            image_url='https://fimgs.net/mdimg/sastojci/t.151.jpg'),
+                                       Note(name='TestBNote', category=NoteCategory.MIDDLE, width='3.4', opacity='1.0',
+                                            image_url='https://fimgs.net/mdimg/sastojci/t.151.jpg'),
+                                       Note(name='Iris', category=NoteCategory.MIDDLE, width='2.5', opacity='0.735089',
+                                            image_url='https://fimgs.net/mdimg/sastojci/t.11.jpg')], url='no-url')
     return debug_perfume
