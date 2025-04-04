@@ -118,12 +118,6 @@ def store_perfume_details(perfume_details: PerfumeDetails, enjoyment: Enjoyment)
     connection.commit()
     connection.close()
 
-
-# Example Usage
-# perfume_details = scrape_page('https://www.fragrantica.com/perfume/Fine-ry/Without-A-Trace-91430.html')
-# enjoyment = Enjoyment.DISLIKE  # Set enjoyment based on user input or logic
-# store_perfume_details(perfume_details, enjoyment)
-
 def scrape_and_store_multiple(urls, enjoyment):
     """
     Scrapes perfume details from multiple URLs, stores them with enjoyment,
