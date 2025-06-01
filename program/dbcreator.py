@@ -1,10 +1,7 @@
 import sqlite3
 import os
 
-def create_db():
-    db_path = r'D:/sqlite_exp/frag/fragrance_530251032.db'
-
-    # Delete the database file if it already exists
+def create_db(db_path):
     if os.path.exists(db_path):
         os.remove(db_path)
         print("Existing database deleted.")
@@ -12,7 +9,6 @@ def create_db():
     # Ensure the folder exists
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
-    # Create a new database file and tables
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
 
@@ -62,6 +58,4 @@ def create_db():
 
     connection.commit()
     connection.close()
-    print("New database created successfully.")
-
-create_db()
+    print(f"New database created successfully at: {db_path}")
