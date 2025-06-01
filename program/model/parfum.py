@@ -2,11 +2,26 @@ from enum import Enum
 from typing import List
 
 class Enjoyment(Enum):
+    FAVORITE = 4
     LOVE = 3
     LIKE = 2
     OK = 1
     DISLIKE = -1
     HATE = -2
+    DESPISE = -4
+
+    @property
+    def weight_multiplier(self) -> float:
+        return {
+            Enjoyment.FAVORITE: 1.6,
+            Enjoyment.LOVE: 1.4,
+            Enjoyment.LIKE: 1.2,
+            Enjoyment.OK: 0.5,  # ↓ Reduced from 1.0
+            Enjoyment.DISLIKE: -1.2,
+            Enjoyment.HATE: -1.4,
+            Enjoyment.DESPISE: -1.6
+        }[self]
+
 
 class NoteCategory(Enum):
     """Enum for note categories."""

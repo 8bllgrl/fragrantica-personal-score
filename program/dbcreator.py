@@ -2,11 +2,17 @@ import sqlite3
 import os
 
 def create_db():
-    db_path = r'D:/sqlite_exp/frag/fragrance_4420251217.db'
+    db_path = r'D:/sqlite_exp/frag/fragrance_530251032.db'
 
+    # Delete the database file if it already exists
     if os.path.exists(db_path):
         os.remove(db_path)
+        print("Existing database deleted.")
 
+    # Ensure the folder exists
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+
+    # Create a new database file and tables
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
 
@@ -38,7 +44,7 @@ def create_db():
         CREATE TABLE IF NOT EXISTS PerfumeNotes (
             perfume_id INTEGER NOT NULL,
             note_id INTEGER NOT NULL,
-            score REAL NOT NULL,
+            width REAL NOT NULL,
             FOREIGN KEY (perfume_id) REFERENCES Perfumes(id),
             FOREIGN KEY (note_id) REFERENCES Notes(id)
         )
@@ -48,7 +54,7 @@ def create_db():
         CREATE TABLE IF NOT EXISTS PerfumeAccords (
             perfume_id INTEGER NOT NULL,
             accord_id INTEGER NOT NULL,
-            score REAL NOT NULL,
+            width REAL NOT NULL,
             FOREIGN KEY (perfume_id) REFERENCES Perfumes(id),
             FOREIGN KEY (accord_id) REFERENCES Accords(id)
         )
@@ -56,6 +62,6 @@ def create_db():
 
     connection.commit()
     connection.close()
-
+    print("New database created successfully.")
 
 create_db()

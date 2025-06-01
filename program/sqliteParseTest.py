@@ -8,6 +8,45 @@ from program.testableHtmlParser import scrape_page
 
 @AOP.log_method_call
 @AOP.log_execution_time
+def get_adjusted_notes(perfume_id, enjoyment, cursor):
+    cursor.execute('''
+        SELECT Notes.name, PerfumeNotes.width
+        FROM PerfumeNotes
+        JOIN Notes ON Notes.id = PerfumeNotes.note_id
+        WHERE perfume_id = ?
+    ''', (perfume_id,))
+
+    return [
+        (name, round(width * enjoyment.value, 3))
+        for name, width in cursor.fetchall()
+    ]
+
+
+# Adjust note widths by enjoyment for all perfumes, aggregated by note name
+@AOP.log_method_call
+@AOP.log_execution_time
+def get_adjusted_note_scores(cursor, enjoyment=1.0):
+    cursor.execute("""
+        SELECT n.name, pn.width
+        FROM PerfumeNotes pn
+        JOIN Notes n ON pn.note_id = n.id
+    """)
+
+    adjusted_scores = {}
+    for name, width in cursor.fetchall():
+        score = width * enjoyment
+        adjusted_scores[name] = adjusted_scores.get(name, 0) + score
+
+    # Convert to sorted list of tuples
+    return sorted(
+        [(name, round(score, 2)) for name, score in adjusted_scores.items()],
+        key=lambda x: x[1],
+        reverse=True
+    )
+
+
+@AOP.log_method_call
+@AOP.log_execution_time
 def store_perfume_details(perfume_details: PerfumeDetails, enjoyment: Enjoyment, database_path: str):
     connection = sqlite3.connect(database_path)
     cursor = connection.cursor()
@@ -22,9 +61,10 @@ def store_perfume_details(perfume_details: PerfumeDetails, enjoyment: Enjoyment,
 
     # Update the width of each note based on enjoyment value
     for note in perfume_details.notes:
-        modified_enjoyment = round(float(note.width) * enjoyment.value, 3)  # Round to 3 decimal places
+        # modified_enjoyment = round(float(note.width) * enjoyment.value, 3)  # Round to 3 decimal places
         note_id = get_or_insert_note(cursor, note)
-        update_perfume_note_score(cursor, perfume_id, note_id, modified_enjoyment)
+        # update_perfume_note_score(cursor, perfume_id, note_id, modified_enjoyment)
+        update_perfume_note_score(cursor, perfume_id, note_id, note.width)
 
     # Update the width of each accord based on enjoyment value
     for accord in perfume_details.accords:
@@ -92,20 +132,21 @@ def insert_note(cursor, note):
 
 @AOP.log_method_call
 @AOP.log_execution_time
-def update_perfume_note_score(cursor, perfume_id, note_id, enjoyment_score):
+def update_perfume_note_score(cursor, perfume_id, note_id, width):
     cursor.execute(''' 
-        SELECT score FROM PerfumeNotes WHERE perfume_id = ? AND note_id = ? 
+        SELECT width FROM PerfumeNotes WHERE perfume_id = ? AND note_id = ? 
     ''', (perfume_id, note_id))
-    existing_score = cursor.fetchone()
-    if existing_score is None:
+    existing = cursor.fetchone()
+    if existing is None:
         cursor.execute(''' 
-            INSERT INTO PerfumeNotes (perfume_id, note_id, score) 
+            INSERT INTO PerfumeNotes (perfume_id, note_id, width) 
             VALUES (?, ?, ?) 
-        ''', (perfume_id, note_id, enjoyment_score))
+        ''', (perfume_id, note_id, width))
     else:
         cursor.execute(''' 
-            UPDATE PerfumeNotes SET score = ? WHERE perfume_id = ? AND note_id = ? 
-        ''', (enjoyment_score, perfume_id, note_id))
+            UPDATE PerfumeNotes SET width = ? WHERE perfume_id = ? AND note_id = ? 
+        ''', (width, perfume_id, note_id))
+
 
 
 @AOP.log_method_call
@@ -133,23 +174,23 @@ def insert_accord(cursor, accord):
 
 
 
-
 @AOP.log_method_call
 @AOP.log_execution_time
-def update_perfume_accord_score(cursor, perfume_id, accord_id, enjoyment_score):
+def update_perfume_accord_score(cursor, perfume_id, accord_id, width):
     cursor.execute(''' 
-        SELECT score FROM PerfumeAccords WHERE perfume_id = ? AND accord_id = ? 
+        SELECT width FROM PerfumeAccords WHERE perfume_id = ? AND accord_id = ? 
     ''', (perfume_id, accord_id))
-    existing_score = cursor.fetchone()
-    if existing_score is None:
+    existing = cursor.fetchone()
+    if existing is None:
         cursor.execute(''' 
-            INSERT INTO PerfumeAccords (perfume_id, accord_id, score) 
+            INSERT INTO PerfumeAccords (perfume_id, accord_id, width) 
             VALUES (?, ?, ?) 
-        ''', (perfume_id, accord_id, enjoyment_score))
+        ''', (perfume_id, accord_id, width))
     else:
         cursor.execute(''' 
-            UPDATE PerfumeAccords SET score = ? WHERE perfume_id = ? AND accord_id = ? 
-        ''', (enjoyment_score, perfume_id, accord_id))
+            UPDATE PerfumeAccords SET width = ? WHERE perfume_id = ? AND accord_id = ? 
+        ''', (width, perfume_id, accord_id))
+
 
 
 @AOP.log_method_call
